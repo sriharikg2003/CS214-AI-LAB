@@ -1,4 +1,4 @@
-# crawler.py
+# craler.py
 # ----------
 # Licensing Information:  You are free to use or extend these projects for
 # educational purposes provided that (1) you do not distribute or publish
