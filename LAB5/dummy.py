@@ -53,7 +53,6 @@ class QLearningAgent(ReinforcementAgent):
         qvalue = self.values[(state,action)]
         return qvalue
 
-        util.raiseNotDefined()
 
 
     def computeValueFromQValues(self, state):
