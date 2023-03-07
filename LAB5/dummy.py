@@ -21,19 +21,16 @@ import random,util,math
 class QLearningAgent(ReinforcementAgent):
     """
       Q-Learning Agent
-
       Functions you should fill in:
         - computeValueFromQValues
         - computeActionFromQValues
         - getQValue
         - getAction
         - update
-
       Instance variables you have access to
         - self.epsilon (exploration prob)
         - self.alpha (learning rate)
         - self.discount (discount rate)
-
       Functions you should use
         - self.getLegalActions(state)
           which returns legal actions for a state
@@ -42,11 +39,9 @@ class QLearningAgent(ReinforcementAgent):
         "You can initialize Q-values here..."
         ReinforcementAgent.__init__(self, **args)
 
-        self.values = util.Counter()
-        # print("**************\n**************\n*****************\n**********\n")
-
-        # print(self)
         "*** YOUR CODE HERE ***"
+        self.values = util.Counter()
+
 
     def getQValue(self, state, action):
         """
@@ -55,12 +50,9 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
-        curren_state = state
-        action_taken = action
-        Qvalue = self.values[(curren_state,action_taken)]
+        qvalue = self.values[(state,action)]
+        return qvalue
 
-        return Qvalue 
-        util.raiseNotDefined()
 
 
     def computeValueFromQValues(self, state):
@@ -71,11 +63,16 @@ class QLearningAgent(ReinforcementAgent):
           terminal state, you should return a value of 0.0.
         """
         "*** YOUR CODE HERE ***"
-        if len(self.getLegalActions(state)) == 0:
+        # getting all the actions of a state
+        actions = self.getLegalActions(state)
+        # value for terminal state is zero
+        if len(actions) == 0:
           return 0
-
         else:
-          return max([self.getQValue(state,action) for action in self.getLegalActions(state)])
+          # the value of other states are just max of the qvalues of the state
+          value = max([self.getQValue(state,action) for action in actions])
+        return value
+        util.raiseNotDefined()
 
     def computeActionFromQValues(self, state):
         """
@@ -84,18 +81,20 @@ class QLearningAgent(ReinforcementAgent):
           you should return None.
         """
         "*** YOUR CODE HERE ***"
-
-        Maxvalue = self.computeValueFromQValues(state)
-        if len(self.getLegalActions(state))==0:
+        actions = self.getLegalActions(state)
+        stateMaxQValue = self.computeValueFromQValues(state)
+        maxAction = []
+        if len(actions) == 0:
           return None
-
         else:
-          array_of_actions= []
-          for action in self.getLegalActions(state):
-            if (self.getQValue(state, action)==Maxvalue):
-              array_of_actions.append(action)
-
-          return random.choice(array_of_actions)
+          maxAction = [action for action in actions if self.getQValue(state, action) == stateMaxQValue]
+          ## to select the non-seen state over the negative qvalued state
+          # if all(i <= 0 for i in maxAction) and any(i == 0 for i in maxAction) :
+          #   maxAction = [action for action in actions if self.getQValue(state, action) == 0]
+          #other wise just random.choice of the action that has maximum Q-value
+          policy = random.choice(maxAction)
+        return policy
+        util.raiseNotDefined()
 
     def getAction(self, state):
         """
@@ -104,18 +103,19 @@ class QLearningAgent(ReinforcementAgent):
           take the best policy action otherwise.  Note that if there are
           no legal actions, which is the case at the terminal state, you
           should choose None as the action.
-
           HINT: You might want to use util.flipCoin(prob)
           HINT: To pick randomly from a list, use random.choice(list)
         """
         # Pick Action
-        legal_moves = self.getLegalActions(state)
+        legalActions = self.getLegalActions(state)
         action = None
         "*** YOUR CODE HERE ***"
-        if util.flipCoin(self.epsilon)==True:
-          action = random.choice(legal_moves)
-
-        else :
+        # for an epsilon greedy approad
+        # we choose random action epsilon times
+        # and optimal 1-epsilon time
+        if util.flipCoin(self.epsilon) == True:
+          action = random.choice(legalActions)
+        else:
           action = self.computeActionFromQValues(state)
         return action
 
@@ -124,19 +124,15 @@ class QLearningAgent(ReinforcementAgent):
           The parent class calls this to observe a
           state = action => nextState and reward transition.
           You should do your Q-Value update here
-
           NOTE: You should never call this function,
           it will be called on your behalf
         """
         "*** YOUR CODE HERE ***"
-        q_of_current_state = self.getQValue(state, action)
-        q_of_next_state = self.computeValueFromQValues(nextState)
-        # self.values[(state,action)] = q_of_current_state + (self.alpha)*(reward +(self.discount)*(q_of_next_state))
-        sample = reward + (self.discount)*q_of_next_state
-        self.values[(state,action)] = (1-self.alpha)*self.values[(state,action)]  + (self.alpha)*sample
-
-
-
+        # temporal update of q-values
+        qValueState = self.getQValue(state,action)
+        qValueNextState = self.computeValueFromQValues(nextState)
+        self.values[(state,action)] = qValueState + self.alpha*(reward + self.discount*(qValueNextState)- qValueState)
+        
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
@@ -153,7 +149,6 @@ class PacmanQAgent(QLearningAgent):
         These default parameters can be changed from the pacman.py command line.
         For example, to change the exploration rate, try:
             python pacman.py -p PacmanQLearningAgent -a epsilon=0.1
-
         alpha    - learning rate
         epsilon  - exploration rate
         gamma    - discount factor
@@ -180,7 +175,6 @@ class PacmanQAgent(QLearningAgent):
 class ApproximateQAgent(PacmanQAgent):
     """
        ApproximateQLearningAgent
-
        You should only have to overwrite getQValue
        and update.  All other QLearningAgent functions
        should work as is.
@@ -199,14 +193,32 @@ class ApproximateQAgent(PacmanQAgent):
           where * is the dotProduct operator
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        #extracting featues
+        featureVector = self.featExtractor.getFeatures(state,action)
+        qvalue = 0
+        # for every feature that we extracted for the state and action
+        # corresponding weight should be extracted to return the qvalue
+        # of a state, which is summation(f_i(s,a)*w_i)
+        for k in featureVector.keys():
+          qvalue = qvalue + self.weights[k] * featureVector[k]
+        return qvalue
+
 
     def update(self, state, action, nextState, reward):
         """
            Should update your weights based on transition
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        #overriding the update function
+        ## qvalue for current state is obtained from getQvalue method
+        ## for nextState it is calculated using the computevalueFromQvalue method
+        qValueCurrentState = self.getQValue(state,action)
+        feature = self.featExtractor.getFeatures(state,action)
+        qValueNextState = self.computeValueFromQValues(nextState)
+        difference = (reward + self.discount*(qValueNextState))- qValueCurrentState
+        for k in feature.keys():
+          self.weights[k] =  self.weights[k] + self.alpha*(difference)*feature[k]
+        
 
     def final(self, state):
         "Called at the end of each game."
@@ -217,4 +229,6 @@ class ApproximateQAgent(PacmanQAgent):
         if self.episodesSoFar == self.numTraining:
             # you might want to print your weights here for debugging
             "*** YOUR CODE HERE ***"
+            # print type(self.weights)
+            # print "keys", (self.weights.keys())
             pass
