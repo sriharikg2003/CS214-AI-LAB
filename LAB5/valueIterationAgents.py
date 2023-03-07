@@ -1,5 +1,3 @@
-
-
 # valueIterationAgents.py
 # -----------------------
 # Licensing Information:  You are free to use or extend these projects for
@@ -12,7 +10,6 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-
 
 import mdp, util
 import random
@@ -53,6 +50,7 @@ class ValueIterationAgent(ValueEstimationAgent):
             copy = self.values.copy()
             for state in self.mdp.getStates() : 
                 if self.mdp.isTerminal(state):
+                    # if the state is terminal value = 0
                     copy[state] = 0
                     continue 
                 Qmax = -99999999999
@@ -61,8 +59,11 @@ class ValueIterationAgent(ValueEstimationAgent):
                     Qval = self.computeQValueFromValues(state , action)
                     if Qval > Qmax : 
                         Qmax = Qval  
+                        # updating the maximum value 
                 copy[state] = Qmax
+                # All these changes are made to a copy of the original Counter
             self.values = copy 
+            # New Counter is now made as Old Counter
 
 
 
@@ -70,6 +71,7 @@ class ValueIterationAgent(ValueEstimationAgent):
         """
           Return the value of the state (computed in __init__).
         """
+        # return the value of the state
         return self.values[state]
 
 
@@ -81,12 +83,14 @@ class ValueIterationAgent(ValueEstimationAgent):
         "*** YOUR CODE HERE ***"
         Qval = 0 
         if self.mdp.isTerminal(state):
+            # return the Q-value 0 if the state is terminal
             return 0 
 
         for pairs in self.mdp.getTransitionStatesAndProbs(state, action) : 
-
+        # For a given state and action we find the expaected value by considering all the non deterministic actions with their transition probabilities and rewards
             Qval += pairs[1]*(self.mdp.getReward(state , action , pairs[0]) + self.discount * self.getValue(pairs[0]))
         return Qval
+        # Calculated Q-value is returned
         util.raiseNotDefined()
 
     def computeActionFromValues(self, state):
@@ -101,16 +105,30 @@ class ValueIterationAgent(ValueEstimationAgent):
         "*** YOUR CODE HERE ***"
         if self.mdp.isTerminal(state):
             return None 
-        Qmax = -99999999
-        best_action = [] 
-        for action in  self.mdp.getPossibleActions(state) : 
-            value_for_this_action = self.computeQValueFromValues(state , action)
-            if value_for_this_action > Qmax :
-                best_action = [action]
-                Qmax = value_for_this_action 
-            if value_for_this_action == Qmax : 
-                best_action.append(action)
-        return random.choice(best_action)
+        temp_counter= util.Counter()
+        for action in self.mdp.getPossibleActions(state):
+            temp_counter[action] = self.computeQValueFromValues(state, action)
+
+        best_action = temp_counter.argMax()
+        return best_action
+      
+
+        # Another way of doing this is :         
+        #     # terminal state has no action to execute
+        # Qmax = -99999999
+        # best_action = [] 
+        # for action in  self.mdp.getPossibleActions(state) : 
+        #     #take all actions possible in a given state 
+        #     value_for_this_action = self.computeQValueFromValues(state , action)
+        #     # storing the value for this action temporarily
+        #     # Now compute the best value
+        #     if value_for_this_action > Qmax :
+        #         best_action = [action]
+        #         Qmax = value_for_this_action 
+        #     if value_for_this_action == Qmax : 
+        #         best_action.append(action)
+        #         # adds all those actions having maximum value
+        # return random.choice(best_action)
         util.raiseNotDefined()
 
     def getPolicy(self, state):
